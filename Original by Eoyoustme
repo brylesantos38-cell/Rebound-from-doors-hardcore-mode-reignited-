@@ -1,0 +1,61 @@
+_G.DO_RED_GUY = true -- enabled for debugging purposes only.
+
+local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
+
+local Camera = workspace.CurrentCamera
+local DeathName = "DeathBackgroundBlue"
+
+local RedPrimary = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+})
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local MainUI = PlayerGui:WaitForChild("MainUI")
+local Death = MainUI:WaitForChild("Death")
+local HelpfulDialogue = Death:WaitForChild("HelpfulDialogue")
+local MainGame = MainUI:WaitForChild("Initiator"):WaitForChild("Main_Game")
+local Health = MainGame:WaitForChild("Health")
+local Music = Health:WaitForChild("Music")
+
+Camera.ChildAdded:Connect(function(Child)
+	if Child.Name ~= DeathName then return end
+	if not _G.DO_RED_GUY then return end
+
+	local Lights = Child:WaitForChild("Lights")
+	local Fog = Child:WaitForChild("FogAndSmaller")
+	local Water = Child:WaitForChild("Water")
+
+	for _, Light in Lights:GetDescendants() do
+		if Light:IsA("SpotLight") then
+			Light.Color = Color3.fromRGB(255, 255, 255)
+		end
+		if Light:IsA("ParticleEmitter") then
+			Light.Color = RedPrimary
+		end
+	end
+
+	for _, FogL in Fog:GetChildren() do
+		FogL.Color = RedPrimary
+	end
+
+	for _, WaterL in Water:GetChildren() do
+		WaterL.Color = RedPrimary
+	end
+
+	local BigLight = Lights:FindFirstChild("BigLight")
+	if BigLight then
+		local Attachment = BigLight:FindFirstChild("Attachment")
+		if Attachment then
+			local Moon = Attachment:FindFirstChild("Moon")
+			if Moon then
+				Moon.Texture = "rbxassetid://17308358558"
+			end
+		end
+	end
+
+	HelpfulDialogue.TextColor3 = Color3.fromRGB(255, 0, 0)
+
+end)
