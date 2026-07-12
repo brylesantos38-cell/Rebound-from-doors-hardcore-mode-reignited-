@@ -1,0 +1,106 @@
+local MainUI = game:GetObjects("rbxassetid://72621580650125")[1]
+MainUI.Parent = game.Players.LocalPlayer.PlayerGui
+
+local plr = game.Players.LocalPlayer
+local arg1 = game.Workspace.CurrentCamera
+local Jumpscare_A90 = MainUI.Jumpscare.Jumpscare_A90
+local face = Jumpscare_A90.Face
+local fac2 = Jumpscare_A90.FaceAngry
+face.Image = "rbxassetid://16973092070"
+fac2.Image = "rbxassetid://16973094899"
+Jumpscare_A90.BackgroundTransparency = 1
+Jumpscare_A90.Face.Visible = true
+Jumpscare_A90.FaceAngry.Visible = false
+Jumpscare_A90.Static.Visible = true
+Jumpscare_A90.Static2.Visible = true
+Jumpscare_A90.Static.ImageTransparency = 1
+Jumpscare_A90.Static2.ImageTransparency = 1
+Jumpscare_A90.Face.ImageColor3 = Color3.new(0, 0, 0)
+Jumpscare_A90.Face.Position = UDim2.new(math.random(10, 90) / 100, 0, math.random(10, 90) / 100, 0)
+Jumpscare_A90.Visible = true
+local isMoving = false
+game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Modules.A90.Spawn:Play()
+task.wait(0.03333333333333333)
+Jumpscare_A90.Face.ImageColor3 = Color3.new(1, 1, 1)
+task.wait(0.48)
+Jumpscare_A90.BackgroundTransparency = 0
+Jumpscare_A90.Face.Position = UDim2.new(0.5, 0, 0.49, 0)
+task.wait(0.03333333333333333)
+Jumpscare_A90.StopIcon.Visible = true
+Jumpscare_A90.BackgroundColor3 = Color3.new(0, 0, 0)
+Jumpscare_A90.BackgroundTransparency = 1
+Jumpscare_A90.Static.ImageTransparency = 0.8
+Jumpscare_A90.Static2.ImageTransparency = 0.8
+local isActive = true
+local LookVector = arg1.CFrame.LookVector
+task.delay(0.4, function()
+	Jumpscare_A90.StopIcon.Visible = false
+	while isActive do
+		task.wait(0.03333333333333333)
+		Jumpscare_A90.Static.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
+		Jumpscare_A90.Static.Rotation = math.random(0, 1) * 180
+		Jumpscare_A90.Static2.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
+		Jumpscare_A90.Static2.Rotation = math.random(0, 1) * 180
+		Jumpscare_A90.Face.Position = UDim2.new(0.5, 0, 0.49, math.random(-1, 1))
+		Jumpscare_A90.FaceAngry.Position = UDim2.new(0.5 + math.random(-100, 100) / 50000, 0, 0.49 + math.random(-100, 100) / 30000, math.random(-1, 1))
+		local randint = math.random(0, 1)
+		Jumpscare_A90.FaceAngry.ImageColor3 = Color3.new(1, randint, randint)
+		if not isMoving then
+			if 0.4 < (LookVector - arg1.CFrame.LookVector).Magnitude then
+				print("LOOKED TOO FAR AWAY")
+				isMoving = true
+			end
+			if 0.4 < plr.Character.Humanoid.MoveDirection.Magnitude then
+				print("KEPT MOVING")
+				isMoving = true
+			end
+		end
+	end
+end)
+task.wait(0.5)
+Jumpscare_A90.BackgroundColor3 = Color3.new(0, 0, 0)
+Jumpscare_A90.BackgroundTransparency = 0
+Jumpscare_A90.Static.ImageTransparency = 0
+Jumpscare_A90.Static2.ImageTransparency = 0.5
+task.wait(0.03333333333333333)
+Jumpscare_A90.Face.ImageColor3 = Color3.new(1, 0, 0)
+task.wait(0.03333333333333333)
+Jumpscare_A90.Visible = false
+task.wait(0.08)
+if isMoving then
+	print("Player moved from A90!")
+	Jumpscare_A90.Visible = true
+	game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Modules.A90.Hit:Play()
+	task.wait(0.03333333333333333)
+	Jumpscare_A90.Face.ImageColor3 = Color3.new(1, 1, 1)
+	task.wait(0.03333333333333333)
+	Jumpscare_A90.BackgroundTransparency = 0
+	Jumpscare_A90.Static.ImageTransparency = 0
+	Jumpscare_A90.Static2.ImageTransparency = 0.5
+	task.wait(0.06666666666666667)
+	Jumpscare_A90.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+	Jumpscare_A90.FaceAngry.Visible = true
+	task.wait(0.06666666666666667)
+	Jumpscare_A90.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
+	Jumpscare_A90.Face.Visible = false
+	Jumpscare_A90.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
+	task.wait(0.75)
+	plr.Character.Humanoid.Health -= 90
+	task.wait(0.1)
+	Jumpscare_A90.FaceAngry.Visible = false
+	Jumpscare_A90.BackgroundColor3 = Color3.new(1, 1, 1)
+	Jumpscare_A90.Static.ImageTransparency = 1
+	Jumpscare_A90.Static2.ImageTransparency = 1
+	task.wait(0.06666666666666667)
+	Jumpscare_A90.BackgroundColor3 = Color3.new(1, 0, 0)
+	task.wait(0.06666666666666667)
+	Jumpscare_A90.BackgroundColor3 = Color3.new(0, 0, 0)
+	task.wait(0.06666666666666667)
+else
+	game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Modules.A90.Spawn:Stop()
+	Jumpscare_A90.BackgroundTransparency = 1
+end
+isActive = false
+Jumpscare_A90.Visible = false
+wait(2)
+MainUI:Destroy()
