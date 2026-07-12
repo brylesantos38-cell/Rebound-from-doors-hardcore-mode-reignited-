@@ -1,0 +1,31 @@
+coroutine.wrap(function()
+	game.ReplicatedStorage.GameData.LatestRoom.Changed:Connect(function()
+		wait(1)
+		game.Players.LocalPlayer.PlayerGui.MainUI.Jumpscare.Jumpscare_Rush.ImageLabel.ImageColor3 = Color3.fromRGB(255, 255, 255)
+		game.Players.LocalPlayer.PlayerGui.MainUI.Jumpscare.Jumpscare_Rush.ImageLabelBig.ImageColor3 = Color3.fromRGB(255, 255, 255)
+		game.Players.LocalPlayer.PlayerGui.MainUI.Jumpscare.Jumpscare_Rush.ImageLabelBig.Image = "rbxassetid://86965329839192"
+		game.Players.LocalPlayer.PlayerGui.MainUI.Jumpscare.Jumpscare_Rush.ImageLabel.Image = "rbxassetid://108323297313724"
+		if game.Workspace:FindFirstChild("AmbushMoving") then
+			game.Workspace.AmbushMoving.RushNew.Attachment.ParticleEmitter.Texture = "rbxassetid://12557955051"
+
+		end
+
+		if game.Workspace:FindFirstChild("RushMoving") then
+			game.Workspace.RushMoving.RushNew.Attachment.BlackTrail.Texture = "rbxassetid://390410785"
+			game.Workspace.RushMoving.RushNew.Attachment.ParticleEmitter.Texture = "rbxassetid://86965329839192"
+			game.Workspace.RushMoving.RushNew.Attachment.ParticleEmitter.Rate = 55
+			game.Workspace.RushMoving.RushNew.Attachment.ParticleEmitter.Brightness = 1
+			game.Workspace.RushMoving.RushNew.Attachment.ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(97, 97, 97))
+			game.Workspace.RushMoving.RushNew.PlaySound.PlaybackSpeed = 0.19
+			game.Workspace.RushMoving.RushNew.PlaySound.Footsteps = 0.35
+
+		end
+	end)
+	--
+end)()
+
+--
+
+--
+
+--
