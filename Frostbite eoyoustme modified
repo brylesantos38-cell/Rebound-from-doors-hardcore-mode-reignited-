@@ -1,0 +1,389 @@
+-- 🧊 Frost Entity Script (Bản Cập Nhật Đông Băng Môi Trường)
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+local currentRoom = nil
+function GetRoom()
+	local gruh = workspace.CurrentRooms
+	currentRoom = gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+	return currentRoom
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+-- ⚙️ Tải model từ Asset ID hoặc GitHub
+function LoadCustomInstance(source, parent)
+	local model
+
+	local function NormalizeGitHubURL(url)
+		if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+			return url .. "?raw=true"
+		end
+		return url
+	end
+
+	while task.wait() and not model do
+		if tonumber(source) then
+			local success, result = pcall(function()
+				return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+			end)
+			if success and result then
+				model = result
+			end
+		elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+			local url = NormalizeGitHubURL(source)
+			local success, result = pcall(function()
+				local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+				local content = game:HttpGet(url)
+				if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+					writefile(filename, content)
+					local assetFunc = getcustomasset or getsynasset
+					local obj = game:GetObjects(assetFunc(filename))[1]
+					delfile(filename)
+					return obj
+				else
+					warn("Executor không hỗ trợ file APIs.")
+					return nil
+				end
+			end)
+			if success and result then
+				model = result
+			end
+		else
+			break
+		end
+
+		if model then
+			model.Parent = parent or workspace
+			for _, obj in ipairs(model:GetDescendants()) do
+				if obj:IsA("Script") or obj:IsA("LocalScript") then
+					obj:Destroy()
+				end
+			end
+			pcall(function()
+				model:SetAttribute("LoadedByExecutor", true)
+			end)
+		end
+	end
+
+	return model
+end
+
+-- 🔽 Tải Frost entity từ GitHub
+local s = LoadCustomInstance("https://github.com/eoyoustme/Hardcore/blob/main/Frostbote.rbxm?raw=true", workspace)
+if not s then
+	warn("Không thể tải Frost entity.")
+	return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+if not entity then
+	error("Không tìm thấy BasePart.")
+end
+
+local activeRoom = GetRoom()
+entity.CFrame = activeRoom:WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -35)
+
+pcall(function() entity.Ambience:Stop() end)
+pcall(function() entity.AmbienceFar:Stop() end)
+
+-- 💡 Ánh sáng xuất hiện
+local pointLight = Instance.new("PointLight")
+pointLight.Color = Color3.new(255, 255, 255)
+pointLight.Range = 120
+pointLight.Brightness = 99999
+pointLight.Parent = entity
+
+tweenservice:Create(pointLight, TweenInfo.new(3), {Range = 0}):Play()
+
+-- 🎵 Âm thanh xuất hiện
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://137044859218769"
+sound.Looped = false
+sound.Volume = 5
+sound.Parent = s
+sound:Play()
+
+-- ❄️ Hiệu ứng lạnh
+local frost = Instance.new("ColorCorrectionEffect")
+frost.Parent = game.Lighting
+frost.Name = "frost4"
+tweenservice:Create(frost, TweenInfo.new(10), {
+	TintColor = Color3.fromRGB(0, 0, 255),
+	Saturation = -0.7,
+	Contrast = 0.2
+}):Play()
+
+-- ❌ Tắt hiệu ứng ban đầu
+for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l","Frostky","Frostky2"}) do
+	if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
+		entity.Attachment[v].Enabled = false
+	end
+end
+
+local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+local camara = game.Workspace.CurrentCamera
+local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+	camara.CFrame = camara.CFrame * shakeCf
+end)
+camShake:Start()
+camShake:ShakeOnce(10,3,0.1,6,7,0.5)
+
+wait(8)
+
+-- ✅ Bật lại tất cả hiệu ứng (Attachment + Particle)
+for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l","Frostky","Frostky2"}) do
+	if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
+		entity.Attachment[v].Enabled = true
+	end
+end
+
+pcall(function() entity.Ambience:Play() end)
+pcall(function() entity.AmbienceFar:Play() end)
+
+-- Blacklist setup to protect critical structures from shattering
+local blacklist = {
+	"key", "breaker", "gold", "floor", "wall", "ceiling", "entrance", "exit"
+}
+
+local function IsProtected(part)
+	local lowerName = part.Name:lower()
+	for _, v in ipairs(blacklist) do
+		if string.find(lowerName, v, 1, true) then
+			return true
+		end
+	end
+	
+	local model = part:FindFirstAncestorOfClass("Model")
+	if model then
+		if model:FindFirstChildOfClass("Humanoid") then return true end
+		if string.find(model.Name:lower(), "door") then return true end
+	end
+	
+	if string.find(lowerName, "door") then return true end
+	return false
+end
+
+-- Cache original states of the room parts to revert or blend correctly
+local originalMetadata = {}
+local brokenParts = {} -- Tracks objects already broken by freeze
+
+if activeRoom then
+	for _, part in ipairs(activeRoom:GetDescendants()) do
+		if part:IsA("BasePart") and not part:IsDescendantOf(s) and not IsProtected(part) then
+			originalMetadata[part] = {
+				Color = part.Color,
+				Material = part.Material,
+				Anchored = part.Anchored,
+				CanCollide = part.CanCollide,
+				CanQuery = part.CanQuery
+			}
+		end
+	end
+end
+
+-- 🔥 Xử lý Đóng Băng và Giao Diện Kiểu Doors
+local dmg = true
+task.spawn(function()
+	local Lighting = game:GetService("Lighting")
+	local player = game.Players.LocalPlayer
+
+	-- Thiết lập màn hình Gui chính
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "Aihoi"
+	screenGui.IgnoreGuiInset = true
+	screenGui.DisplayOrder = 999999
+	screenGui.Parent = player:WaitForChild("PlayerGui")
+
+	-- Hiệu ứng che phủ màn hình
+	local imageLabel = Instance.new("ImageLabel")
+	imageLabel.BackgroundTransparency = 1
+	imageLabel.BorderSizePixel = 0
+	imageLabel.Size = UDim2.new(1, 0, 1, 0)
+	imageLabel.Image = "rbxassetid://10344339712"
+	imageLabel.ImageTransparency = 1
+	imageLabel.Visible = true
+	imageLabel.Parent = screenGui
+
+	-- Thiết kế thanh đo nhiệt độ phong cách Doors
+	local barContainer = Instance.new("Frame")
+	barContainer.Name = "FrostBarContainer"
+	barContainer.Size = UDim2.new(0, 250, 0, 12)
+	barContainer.Position = UDim2.new(0.5, -125, 0.85, 0)
+	barContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	barContainer.BorderSizePixel = 2
+	barContainer.BorderColor3 = Color3.fromRGB(130, 160, 190)
+	barContainer.Parent = screenGui
+
+	local barFill = Instance.new("Frame")
+	barFill.Name = "Fill"
+	barFill.Size = UDim2.new(0, 0, 1, 0)
+	barFill.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
+	barFill.BorderSizePixel = 0
+	barFill.Parent = barContainer
+	
+	local blur = Lighting:FindFirstChild("Blur5")
+	if not blur then
+		blur = Instance.new("BlurEffect")
+		blur.Name = "Blur5"
+		blur.Size = 0
+		blur.Parent = Lighting
+	else
+		blur.Size = 0
+		blur.Enabled = true
+	end
+
+	local currentFrost = 0
+
+	while dmg do
+		task.wait(0.1)
+		local character = player.Character or chr
+		if not character then continue end
+
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if not humanoid or humanoid.Health <= 0 then 
+			break
+		end
+
+		local lighter = character:FindFirstChild("Lighter")
+
+		-- Kiểm tra trạng thái bật lửa
+		if not lighter or not lighter:GetAttribute("Enabled") then
+			currentFrost = math.min(100, currentFrost + 0.8)
+			
+			imageLabel.ImageTransparency = 1 - (currentFrost / 100)
+			blur.Size = (currentFrost / 100) * 15
+			blur.Enabled = true
+		else
+			currentFrost = math.max(0, currentFrost - 2.5)
+			imageLabel.ImageTransparency = 1 - (currentFrost / 100)
+			blur.Size = (currentFrost / 100) * 15
+			if currentFrost == 0 then
+				blur.Enabled = false
+			end
+		end
+
+		-- Biến đổi môi trường theo tỷ lệ đóng băng
+		local progress = currentFrost / 100
+		for part, data in pairs(originalMetadata) do
+			if part and part.Parent then
+				-- Trộn màu gốc sang màu xanh băng giá
+				local frostColor = Color3.fromRGB(115, 200, 255)
+				part.Color = data.Color:Lerp(frostColor, progress)
+				
+				-- Biến đổi vật liệu khi phòng lạnh sâu (> 40%)
+				if currentFrost > 40 then
+					part.Material = Enum.Material.Ice
+					
+					-- CHANGED: Shatter and break physics for frozen furniture at high deep freeze levels (>65%)
+					if currentFrost > 65 and not brokenParts[part] then
+						brokenParts[part] = true
+						
+						part.Anchored = false
+						part:BreakJoints()
+						part.Massless = true
+						part.CanCollide = false
+						part.CanQuery = false
+						
+						-- Custom physics profile so players pass easily
+						part.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0.3, 0.5, 1, 1)
+						
+						-- Gentle shatter blast velocity outward
+						part.AssemblyLinearVelocity = Vector3.new(
+							math.random(-25, 25),
+							math.random(10, 35),
+							math.random(-25, 25)
+						)
+						part.AssemblyAngularVelocity = Vector3.new(
+							math.random(-5, 5),
+							math.random(-5, 5),
+							math.random(-5, 5)
+						)
+					end
+				else
+					if not brokenParts[part] then
+						part.Material = data.Material
+					end
+				end
+			end
+		end
+
+		-- Cập nhật thanh giao diện thanh đo
+		tweenservice:Create(barFill, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {
+			Size = UDim2.new(progress, 0, 1, 0)
+		}):Play()
+
+		if currentFrost >= 100 then
+			dmg = false
+			humanoid.Health = 0
+
+			pcall(function()
+				local statsFolder = game.ReplicatedStorage.GameStats:FindFirstChild("Player_" .. player.Name)
+				if statsFolder and statsFolder:FindFirstChild("Total") and statsFolder.Total:FindFirstChild("DeathCause") then
+					statsFolder.Total.DeathCause.Value = "Frostbite"
+				end
+			end)
+			break
+		end
+	end
+end)
+
+-- 🛑 Khi chuyển phòng
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+dmg = false
+
+-- Hoàn tác thuộc tính gốc của vật thể trước khi hủy
+for part, data in pairs(originalMetadata) do
+	if part and part.Parent then
+		part.Color = data.Color
+		part.Material = data.Material
+		part.Anchored = data.Anchored
+		part.CanCollide = data.CanCollide
+		part.CanQuery = data.CanQuery
+	end
+end
+
+-- Tắt các hiệu ứng khi rời phòng
+for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l","Frostky","Frostky2"}) do
+	if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
+		entity.Attachment[v].Enabled = false
+	end
+end
+
+pcall(function() entity.Ambience:Stop() end)
+pcall(function() entity.AmbienceFar:Stop() end)
+
+local des = Instance.new("Sound")
+des.SoundId = "rbxassetid://111715441853991"
+des.Looped = false
+des.Volume = 2.5
+des.Parent = s
+des:Play()
+
+wait(5)
+s:Destroy()
+
+-- 🌈 Hoàn tác hiệu ứng lạnh màn hình
+tweenservice:Create(game.Lighting.frost4, TweenInfo.new(5), {
+	TintColor = Color3.fromRGB(255, 255, 255),
+	Saturation = 0,
+	Contrast = 0
+}):Play()
+wait(1)
+
+local blur = game.Lighting:FindFirstChild("Blur5")
+if blur then blur:Destroy() end
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local anhguoc = player:WaitForChild("PlayerGui")
+local cac = anhguoc:FindFirstChild("Aihoi")
+if cac then
+	cac:Destroy()
+end
+wait(4)
+if game.Lighting:FindFirstChild("frost4") then
+	game.Lighting.frost4:Destroy()
+end
