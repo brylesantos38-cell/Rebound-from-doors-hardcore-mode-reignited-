@@ -1,0 +1,173 @@
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local HRP = Character:WaitForChild("HumanoidRootPart")
+
+local function GetRoom()
+	return workspace.CurrentRooms:FindFirstChild(ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local old = workspace:FindFirstChild("Silence")
+if old then
+	old:Destroy()
+end
+
+local Silence5 = game:GetObjects("rbxassetid://75200967024105")[1]
+Silence5.Name = "Silence"
+Silence5.Parent = workspace
+
+local Silence = Silence5:FindFirstChild("RushNew") or Silence5:FindFirstChildWhichIsA("BasePart")
+assert(Silence,"Not dind")
+
+local room = GetRoom()
+local entrance = room:WaitForChild("RoomEntrance")
+
+Silence.Anchored = true
+
+local startCF = entrance.CFrame * CFrame.new(0,30,-35)
+local spaw5n = entrance.CFrame * CFrame.new(0,0,-35)
+local endCF = entrance.CFrame * CFrame.new(0,2,-35)
+
+Silence.CFrame = startCF
+
+TweenService:Create(
+	Silence,
+	TweenInfo.new(1.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+	{
+		CFrame = endCF
+	}
+):Play()
+
+local light = Silence:WaitForChild("PointLight")
+
+TweenService:Create(
+	light,
+	TweenInfo.new(1,Enum.EasingStyle.Linear),
+	{
+		Range = 0
+	}
+):Play()
+
+task.spawn(function()
+	local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+	local camara = game.Workspace.CurrentCamera
+	local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+		camara.CFrame = camara.CFrame * shakeCf
+	end)
+	camShake:Start()
+	camShake:ShakeOnce(20,10,0,4,2,12)
+	local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+	local camara = game.Workspace.CurrentCamera
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "Dude"
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 999998
+	gui.Parent = LocalPlayer.PlayerGui
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.fromScale(1,1)
+	frame.BorderSizePixel = 0
+	frame.BackgroundColor3 = Color3.fromRGB(170,0,255)
+	frame.Parent = gui
+
+	local tween = TweenService:Create(
+		frame,
+		TweenInfo.new(0.7,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+		{
+			BackgroundTransparency = 1
+		}
+	)
+
+	tween:Play()
+	tween.Completed:Wait()
+
+	gui:Destroy()
+end)
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://7861818231"
+sound.Volume = 4
+sound.Parent = workspace
+sound:Play()
+
+task.wait(3)
+
+local lastPos = HRP.Position
+local Kill = true
+local damageInterval = 0.054
+
+task.spawn(function()
+	while Kill do
+		task.wait(damageInterval)
+
+		local currentPos = HRP.Position
+
+		if (currentPos-lastPos).Magnitude > 0.3 then
+
+			require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("",true)
+
+			if Humanoid.Health > 0 and not Character:GetAttribute("Crouching") then
+
+				local s = Instance.new("Sound")
+				s.SoundId = "rbxassetid://7861818231"
+				s.Volume = 4
+				s.Parent = workspace
+				s:Play()
+
+				local tween = TweenService:Create(
+					Silence,
+					TweenInfo.new(0.3,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+					{
+						CFrame = HRP.CFrame
+					}
+				)
+
+				tween:Play()
+
+				if not Character:GetAttribute("Crouching") then
+					Humanoid.Health = 0
+					local sound = Instance.new("Sound")
+					sound.SoundId = "rbxassetid://4988621968"
+					sound.Volume = 10
+					sound.PlaybackSpeed = 0.7
+					sound.Parent = workspace
+					sound:Play()
+					break
+				end
+			end
+		end
+
+		lastPos = currentPos
+	end
+end)
+
+local Removed = false
+
+local function RemoveSilence()
+	if Removed then
+		return
+	end
+
+	Removed = true
+	Kill = false
+
+	if Silence5 and Silence5.Parent then
+		Silence5:Destroy()
+	end
+end
+
+task.delay(7, RemoveSilence)
+
+local connection
+connection = workspace.CurrentRooms.ChildAdded:Connect(function()
+	RemoveSilence()
+
+	if connection then
+		connection:Disconnect()
+	end
+end)
