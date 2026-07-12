@@ -1,1 +1,344 @@
-https://raw.githubusercontent.com/eoyoustme/Hardcore/refs/heads/main/Deer%20God
+local function GetGitSound(GithubSnd, SoundName)
+	local url = GithubSnd
+	if not isfile(SoundName .. ".mp3") then
+		writefile(SoundName .. ".mp3", game:HttpGet(url))
+	end
+	local sound = Instance.new("Sound")
+	sound.SoundId = (getcustomasset or getsynasset)(SoundName .. ".mp3")
+	return sound
+end
+local Lord = GetGitSound("https://github.com/eoyoustme/Hardcore/blob/main/Your_Consenting_Mind.mp3?raw=true","Your")
+Lord.Parent = workspace
+Lord.Volume = 3
+Lord.PlaybackSpeed = 1
+Lord:Play()
+
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("you being follow...", true)
+
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local Debris = game:GetService("Debris")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+---====== Load spawner ======---
+
+local Spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/eoyoustme/Hardcore/refs/heads/main/Deer%20god%20spawner"))()
+
+---====== Create entity ======---
+
+local entity = Spawner:Create({
+	Entity = {
+		Name = "Deer God",
+		Asset = "https://github.com/eoyoustme/Hardcore/blob/main/Deer%20God.rbxm?raw=true",
+		HeightOffset = 0.4
+	},
+	Lights = {
+		Flicker = {
+			Enabled = true,
+			Duration = 100
+		},
+		Shatter = false,
+		Repair = true
+	},
+	Earthquake = {
+		Enabled = true
+	},
+	CameraShake = {
+		Enabled = true,
+		Range = 100,
+		Values = {1.5, 20, 0.1, 1} -- Magnitude, Roughness, FadeIn, FadeOut
+	},
+	Movement = {
+		Speed = 32,
+		Delay = 0,
+		Reversed = false
+	},
+	Rebounding = {
+		Enabled = false,
+		Type = "Ambush", -- "Blitz"
+		Min = 1,
+		Max = 1,
+		Delay = 2
+	},
+	Damage = {
+		Enabled = true,
+		Range = 500,
+		Amount = 0.001
+	},
+	Crucifixion = {
+		Enabled = true,
+		Range = 70,
+		Resist = false,
+		Break = true
+	},
+	Death = {
+		Type = "Guiding", -- "Curious"
+		Hints = {"Death", "Hints", "Go", "Here"},
+		Cause = ""
+	}
+})
+
+---====== Debug entity ======---
+
+entity:SetCallback("OnSpawned", function()
+	print("Entity has spawned")
+	local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+	local camara = game.Workspace.CurrentCamera
+	local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+		camara.CFrame = camara.CFrame * shakeCf
+	end)
+	camShake:Start()
+	camShake:ShakeOnce(10,3.5,0.1,15,15,0.5)
+
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+
+			local player = game.Players.LocalPlayer
+			local char = player.Character
+			if not char then continue end
+
+			local hum = char:FindFirstChildWhichIsA("Humanoid")
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			local entity = workspace:FindFirstChild("Deer God") and workspace["Deer God"]:FindFirstChildWhichIsA("BasePart")
+
+			if hum and hrp and entity then
+				if (hrp.Position - entity.Position).Magnitude <= 9 then
+					if hum.Health > 0 then
+						hum.Health = 0
+						for i = 1, 1 do
+							local mode = Random.new():NextInteger(1, 2)
+							if mode == 1 then
+								loadstring(game:HttpGet("https://raw.githubusercontent.com/eoyoustme/Hardcore/refs/heads/main/Deer%20God%20Jumpscare"))()
+							elseif mode == 2 then
+								loadstring(game:HttpGet("https://raw.githubusercontent.com/eoyoustme/Hardcore/refs/heads/main/Deer%20god%20jump"))()
+							end
+						end
+
+						local stats = game:GetService("ReplicatedStorage").GameStats:FindFirstChild("Player_" .. player.Name)
+						if stats and stats:FindFirstChild("Total") then
+							stats.Total.DeathCause.Value = "Deer God"
+						end
+
+						break -- hoặc return
+					end
+				end
+			end
+		end
+	end)
+
+
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "JumpscareOverlay"
+	screenGui.IgnoreGuiInset = true
+	screenGui.DisplayOrder = 999999
+	screenGui.Parent = player:WaitForChild("PlayerGui")
+
+	local imageLabel = Instance.new("ImageLabel")
+	imageLabel.BackgroundTransparency = 1
+	imageLabel.BorderSizePixel = 0
+	imageLabel.Position = UDim2.new(0, 0, 0, 0)
+	imageLabel.Size = UDim2.new(1, 0, 1, 0)
+	imageLabel.ScaleType = Enum.ScaleType.Stretch
+	imageLabel.ImageTransparency = 0.7
+	imageLabel.Visible = true
+	imageLabel.Parent = screenGui
+
+	local jumpscareImage1 = "rbxassetid://134346506410955"		
+	local jumpscareImage2 = "rbxassetid://7578853379"
+	local jumpscareImage3 = "rbxassetid://103846711769666"
+	local jumpscareImage4 = "rbxassetid://78199392475572"
+
+
+	local flashDuration = 350
+	local start = tick()
+
+	while tick() - start < flashDuration do
+		imageLabel.Image = jumpscareImage1
+		task.wait()
+		imageLabel.Image = jumpscareImage2
+		task.wait()
+		imageLabel.Image = jumpscareImage3
+		task.wait()
+		imageLabel.Image = jumpscareImage4
+		task.wait()
+	end
+
+end)
+
+entity:SetCallback("OnStartMoving", function()
+	local player = game.Players.LocalPlayer
+	local playerGui = player:WaitForChild("PlayerGui")
+	local character = player.Character or player.CharacterAdded:Wait()
+	local humanoid = character:WaitForChild("Humanoid")
+	local camera = workspace.CurrentCamera
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+
+			local player = game.Players.LocalPlayer
+			local char = player.Character
+			if not char then continue end
+
+			local hum = char:FindFirstChildWhichIsA("Humanoid")
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			local entity = workspace:FindFirstChild("Deer God") and workspace["Deer God"]:FindFirstChildWhichIsA("BasePart")
+
+			if hum and hrp and entity then
+				if (hrp.Position - entity.Position).Magnitude <= 50 then
+					if game.Players.LocalPlayer.Character:GetAttribute("Hiding") and hum.Health > 0 then
+						hum.Health = 0
+						for i = 1, 1 do
+							local mode = Random.new():NextInteger(1, 2)
+							if mode == 1 then
+								loadstring(game:HttpGet("https://raw.githubusercontent.com/eoyoustme/Hardcore/refs/heads/main/Deer%20God%20Jumpscare"))()
+							elseif mode == 2 then
+								loadstring(game:HttpGet("https://raw.githubusercontent.com/eoyoustme/Hardcore/refs/heads/main/Deer%20god%20jump"))()
+							end
+						end
+
+						local stats = game:GetService("ReplicatedStorage").GameStats:FindFirstChild("Player_" .. player.Name)
+						if stats and stats:FindFirstChild("Total") then
+							stats.Total.DeathCause.Value = "Deer God"
+						end
+
+						break -- hoặc return
+					end
+				end
+			end
+		end
+	end)
+
+end)
+
+entity:SetCallback("OnEnterRoom", function(room: Model, firstTime: boolean)
+	if firstTime == true then
+		wait(math.random(0.5,1))
+		print("Entity has entered room: " .. room.Name .. " for the first time")
+
+		local a1 = ({
+			"Join us",
+			"Why do you run, child",
+			"Your submission is inevitable",
+			"Your flesh will sustain my children"
+		})[math.random(4)]
+
+		require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption(a1, true)
+
+		local s = Instance.new("Sound")
+		s.Volume = 6
+		s.Parent = workspace
+
+		if a1 == "Join us" then
+			s.SoundId = "rbxassetid://6250814572"
+
+		elseif a1 == "Why do you run, child" then
+			s.SoundId = "rbxassetid://6250812725"
+
+		elseif a1 == "Your submission is inevitable" then
+			s.SoundId = "rbxassetid://6250815445"
+
+		elseif a1 == "Your flesh will sustain my children" then
+			s.SoundId = "rbxassetid://6250816544"
+		end
+
+		s:Play()
+
+		s.Ended:Connect(function()
+			s:Destroy()
+		end)
+	else
+		print("Entity has entered room: ".. room.Name.. " again")
+	end
+end)
+
+entity:SetCallback("OnLookAt", function(lineOfSight: boolean)
+	if lineOfSight == true then
+		print("Player is looking at entity")
+	else
+		print("Player view is obstructed by something")
+	end
+end)
+
+entity:SetCallback("OnRebounding", function(startOfRebound: boolean)
+	if startOfRebound == true then
+		print("Entity has started rebounding")
+	else
+		print("Entity has finished rebounding")
+	end
+end)
+
+entity:SetCallback("OnDespawning", function()
+	print("Entity is despawning")
+	local deer = workspace:WaitForChild("Deer God")
+	deer:Destroy()
+	---====== Load achievement giver ======---
+	local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+
+	---====== Display achievement ======---
+	achievementGiver({
+		Title = "Last Chance Too Run Away",
+		Desc = "JORUN US RUN NOW!",
+		Reason = "Survive a God...",
+		Image = "rbxassetid://91924400987994"
+	})
+
+	local anhguoc = player:WaitForChild("PlayerGui")
+	local cac = anhguoc:WaitForChild("JumpscareOverlay")
+	if cac then
+		cac:Destroy()
+	end
+
+	Lord:Destroy()
+end)
+
+entity:SetCallback("OnDespawned", function()
+	print("Entity has despawned")
+end)
+
+entity:SetCallback("OnDamagePlayer", function(newHealth: number)
+	if newHealth <= 0 then
+		print("Entity has killed the player")
+	else
+		print("Entity has damaged the player")
+		local TweenService = game:GetService("TweenService")
+
+		local model = workspace:WaitForChild("Deer God")
+		local part = model.RushNew
+		assert(part, "Model chưa có PrimaryPart!")
+
+		local player = game.Players.LocalPlayer
+		local hrp = (player.Character or player.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
+
+		part.Anchored = true
+
+		local tween = TweenService:Create(
+			part,
+			TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{CFrame = hrp.CFrame}
+		)
+
+		tween:Play()
+		tween.Completed:Wait()
+	end
+end)
+
+--[[
+
+DEVELOPER NOTE:
+By overwriting 'CrucifixionOverwrite' the default crucifixion callback will be replaced with your custom callback.
+
+entity:SetCallback("CrucifixionOverwrite", function()
+    print("Custom crucifixion callback")
+end)
+
+]]--
+
+---====== Run entity ======---
+
+entity:Run(true)
