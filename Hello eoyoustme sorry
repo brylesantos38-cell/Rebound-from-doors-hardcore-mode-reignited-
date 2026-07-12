@@ -1,0 +1,139 @@
+task.spawn(function()
+			local function GetGitSound(GithubSnd, SoundName)
+				local url = GithubSnd
+				if not isfile(SoundName .. ".mp3") then
+					writefile(SoundName .. ".mp3", game:HttpGet(url))
+				end
+				local sound = Instance.new("Sound")
+				sound.SoundId = (getcustomasset or getsynasset)(SoundName .. ".mp3")
+				return sound
+			end
+			local Jumpscare = GetGitSound("https://github.com/eoyoustme/Hardcore/blob/main/Doors%20hardcore%20reignited%20Door%201%20OST.mp3?raw=true","Ost")
+			Jumpscare.Parent = workspace
+			Jumpscare.Volume = 1
+			Jumpscare.PlaybackSpeed = 1
+			Jumpscare:Play()
+
+			wait(7.4)
+
+			local TweenService = game:GetService("TweenService")
+			local CoreGui = game:GetService("CoreGui")
+			local UserInputService = game:GetService("UserInputService")
+
+			local ScreenGui = Instance.new("ScreenGui")
+			ScreenGui.Name = "HardcoreReiginitedCredits"
+			ScreenGui.ResetOnSpawn = false
+			ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+			local CanvasGroup = Instance.new("CanvasGroup")
+			CanvasGroup.Size = UDim2.new(1, 0, 1, 0)
+			CanvasGroup.BackgroundTransparency = 1
+			CanvasGroup.GroupTransparency = 1 
+			CanvasGroup.Parent = ScreenGui
+
+			local targetTextSize = 45 
+			if UserInputService.TouchEnabled then -- what are u looking?
+				targetTextSize = 20 
+			end
+
+			local TextLabel = Instance.new("TextLabel")
+			TextLabel.Size = UDim2.new(0.4, 0, 0.8, 0) 
+			TextLabel.Position = UDim2.new(0.98, 0, 0.5, 0) 
+			TextLabel.AnchorPoint = Vector2.new(1, 0.5) 
+			TextLabel.BackgroundTransparency = 1
+			TextLabel.Font = Enum.Font.Oswald
+			TextLabel.TextSize = targetTextSize
+			TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Changes default text color to pure white
+			TextLabel.TextXAlignment = Enum.TextXAlignment.Center 
+			TextLabel.TextYAlignment = Enum.TextYAlignment.Center
+			TextLabel.RichText = true
+
+			-- Updated RichText format with your new credit disclaimer notes included
+			TextLabel.Text = [[
+<font color="rgb(255,255,255)">DOORS Hardcore: Reiginited Recreate  </font><font color="rgb(255,255,255)">by Phongreal662 (Og Hunger (new is original)</font>
+<i><font color="rgb(230,230,230)">No I don't own these entities, it's by the credited people.</font></i>
+<i><font color="rgb(230,230,230)">Credits to Eoyoustme and them for the ENTITIES, and the rebound is by me and the ripper too</font></i>
+
+<u><font color="rgb(255, 255, 255)">Credits to:</font></u>
+<font color="rgb(255,255,255)">NhankgNew </font><font color="rgb(255,255,255)">[Helper]</font>
+<font color="rgb(255,255,255)">pyxlfunkin. </font><font color="rgb(255,255,255)">[Orgin Hardcore reignited and Model]</font>
+<font color="rgb(255,255,255)">Noonie </font><font color="rgb(255,255,255)">[Creator of OG Hardcore, Entity, THE LOREEEEEE]</font>
+<font color="rgb(255,255,255)">Ping </font><font color="rgb(255,255,255)">[Creator of OG Hardcore, Music]</font>
+<font color="rgb(255,255,255)">Ostah </font><font color="rgb(255,255,255)">[For Shocker Model]</font>
+<font color="rgb(255,255,255)">Vynixu </font><font color="rgb(255,255,255)">[Entity Spawner]</font>
+<font color="rgb(255,255,255)">You! [For Playing!]</font>
+]]
+
+			local UIStroke = Instance.new("UIStroke")
+			UIStroke.Thickness = (targetTextSize > 40) and 4 or 2.5 
+			UIStroke.Color = Color3.fromRGB(0, 0, 0)
+			UIStroke.Transparency = 0.2
+			UIStroke.Parent = TextLabel
+
+			TextLabel.Parent = CanvasGroup
+
+			if syn and syn.protect_gui then
+				syn.protect_gui(ScreenGui)
+				ScreenGui.Parent = CoreGui
+			elseif gethui then
+				ScreenGui.Parent = gethui()
+			else
+				ScreenGui.Parent = CoreGui
+			end
+
+			local faker = TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			local fakerthua = TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+
+			local fakerwin = TweenService:Create(CanvasGroup, faker, {GroupTransparency = 0})
+			local fakerthuavl = TweenService:Create(CanvasGroup, fakerthua, {GroupTransparency = 1})
+
+			fakerwin:Play()
+			fakerwin.Completed:Wait()
+
+			task.wait(10)
+
+			fakerthuavl:Play()
+			fakerthuavl.Completed:Wait()
+
+			-- Clean up
+	ScreenGui:Destroy()
+	
+	local function Entity()
+
+		local namesToCheck = {
+			"Shocker",
+			"Eyes",
+			"Ripper reignited",
+			"Rebound"
+		}
+
+		for _, name in ipairs(namesToCheck) do
+			if game.Workspace:WaitForChild(name, true) then
+				return true
+			end
+		end
+
+		for _, inst in ipairs(game.Workspace:GetDescendants()) do
+			local n = string.lower(inst.Name)
+			if string.find(n, "shocker") then
+				return true
+			end
+		end
+
+		return false
+	end
+	
+	if Entity() then
+		Jumpscare:Destroy()
+		local a1 = ({
+			"Who tf is joe?!?!",
+			"Ty SD-PAINTER For music:D",
+			"Me when meet ripper:",
+			"I am... your mom"
+		})[math.random(4)]
+
+		require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption(a1, true)
+	end
+
+
+		end)
