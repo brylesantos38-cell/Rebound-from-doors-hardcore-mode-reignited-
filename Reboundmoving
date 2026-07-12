@@ -1,0 +1,439 @@
+local G = getgenv()
+local ReplicatedStorage = game.ReplicatedStorage
+local remotesFolder = nil
+
+-- The new destruction sounds
+local destructionSounds = {
+    "rbxassetid://135625689833378",
+    "rbxassetid://114293452219807",
+    "rbxassetid://71738143711601",
+    "rbxassetid://9120479831"
+}
+
+G.LoadGithubAudio = function(url)
+    if not (writefile and getcustomasset and request) then return nil end
+
+    -- Generate consistent filename from URL
+    local function generateFileName(url)
+        local hash = 0
+        for i = 1, #url do
+            hash = (hash * 31 + string.byte(url, i)) % 2^32
+        end
+        return "rebound_fix_" .. tostring(hash) .. ".mp3"
+    end
+    
+    local fileName = generateFileName(url)
+    
+    -- Check if file exists and return it
+    local success, exists = pcall(function()
+        return isfile and isfile(fileName)
+    end)
+    
+    if success and exists then
+        local assetSuccess, assetId = pcall(function()
+            return getcustomasset(fileName)
+        end)
+        
+        if assetSuccess then
+            print("✅ Áudio Rebound carregado do cache!")
+            return assetId
+        end
+    end
+
+    -- Download new audio if not exists
+    local response = request({
+        Url = url,
+        Method = "GET",
+        Headers = {
+            ["Accept"] = "audio/mpeg, audio/ogg, application/octet-stream"
+        }
+    })
+
+    if response.StatusCode ~= 200 then
+        warn("Xeno: Falha no download. Status: " .. response.StatusCode)
+        return nil
+    end
+    
+    writefile(fileName, response.Body)
+    
+    local success, assetId = pcall(function()
+        return getcustomasset(fileName)
+    end)
+
+    if success then
+        print("✅ Áudio Rebound carregado com sucesso!")
+        return assetId
+    end
+    
+    warn("Erro no getcustomasset: " .. tostring(assetId))
+    return nil
+end
+
+G.LoadGithubModel = function(url)
+    if not (writefile and getcustomasset and request) then
+        return nil
+    end
+    
+    local function generateFileName(url)
+        local hash = 0
+        for i = 1, #url do
+            hash = (hash * 31 + string.byte(url, i)) % 2^32
+        end
+        return "rebound_" .. tostring(hash) .. ".rbxm"
+    end
+    
+    local fileName = generateFileName(url)
+    
+    local fileExists = false
+    local success, exists = pcall(function()
+        return isfile and isfile(fileName)
+    end)
+    
+    if success and exists then
+        fileExists = true
+        local assetId = getcustomasset(fileName)
+        local loadSuccess, result = pcall(function()
+            return game:GetObjects(assetId)[1]
+        end)
+        
+        if loadSuccess and result then
+            return result
+        end
+    end
+    
+    local response = request({Url = url, Method = "GET"})
+    if response.StatusCode ~= 200 then return nil end
+    
+    writefile(fileName, response.Body)
+    local assetId = getcustomasset(fileName)
+    local success, result = pcall(function()
+        return game:GetObjects(assetId)[1]
+    end)
+    
+    if success and result then return result end
+    return nil
+end
+
+local function Rebound()
+    local repStorage = game.ReplicatedStorage
+    local gameData = repStorage.GameData
+    local latestRoom = gameData.LatestRoom
+    local plusRoom = latestRoom.Value + 1
+    local currentRooms = workspace.CurrentRooms
+    local killed = false
+    local speed = 2
+    local entity = nil
+    local cameraShaker = require(game.ReplicatedStorage.CameraShaker)
+    local camera = workspace.CurrentCamera
+
+    local camShake = cameraShaker.new(Enum.RenderPriority.Camera.Value, function(cf)
+        camera.CFrame = camera.CFrame * cf
+    end)
+    camShake:Start()
+
+	local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://110660957127652")[1]
+    end)
+
+    if success and result then
+        entity = result
+        entity.Parent = workspace
+    end
+
+    if not entity then return end
+
+    local function GetLastRoom()
+        return currentRooms:FindFirstChild(plusRoom)
+    end
+    
+    local entityPart = entity.PrimaryPart or entity:FindFirstChildWhichIsA("BasePart")
+    entityPart.CFrame = GetLastRoom().RoomExit.CFrame
+    entityPart.CanCollide = false
+    entityPart.Anchored = true
+    wait(4)
+    
+    local rebmoving = G.LoadGithubAudio("https://raw.githubusercontent.com/Francisco1692qzd/RevivedOldHardcore/main/MovingRebound.mp3")
+    local moving = Instance.new("Sound")
+    moving.SoundId = rebmoving
+    moving.Parent = entityPart
+    moving.Volume = 10
+    moving:Play()
+
+    local function canSeeTarget(target, size)
+        if killed == true then return end
+        local function isBossActive()
+            local room = latestRoom.Value
+            if room == 50 or room == 100 then return true end
+            
+            for _, sound in pairs(game.ReplicatedStorage:GetDescendants()) do
+                if sound:IsA("Sound") and sound.IsPlaying and (sound.Name:find("Music") or sound.Name == "Shade") then
+                    return true
+                end
+            end
+            return false
+        end
+
+        if isBossActive() then return end
+		
+        local origin = entityPart.Position
+        local direction = (target.HumanoidRootPart.Position - origin).unit * size
+        local ray = Ray.new(origin, direction)
+
+        local hit, pos = workspace:FindPartOnRay(ray, entityPart)
+
+        if hit then
+            if hit:IsDescendantOf(target) then
+                killed = true
+                return true
+            end
+        else
+            return false
+        end
+    end
+
+    -- Modified Destruction Aura: Drops parts gently so they can be pushed easily
+    task.spawn(function()
+        while entityPart ~= nil and entity ~= nil do
+            task.wait(0.05) 
+            
+            local overlapParams = OverlapParams.new()
+            overlapParams.FilterDescendantsInstances = {entity}
+            overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+
+            local partsNear = workspace:GetPartBoundsInRadius(entityPart.Position, 35, overlapParams)
+            local playedSound = false
+
+            for _, part in ipairs(partsNear) do
+                local isCharacter = false
+                if part.Parent and part.Parent:FindFirstChildOfClass("Humanoid") then
+                    isCharacter = true
+                end
+
+                local isDoor = false
+                if string.find(part.Name:lower(), "door") then
+                    isDoor = true
+                elseif part.Parent and string.find(part.Parent.Name:lower(), "door") then
+                    isDoor = true
+                end
+
+                -- Target map props: filter out massive geometry, characters, and doors
+                if part:IsA("BasePart") and part.Size.Magnitude < 45 and not isCharacter and not isDoor then
+                    if part.Anchored then
+                        part.Anchored = false
+                        part:BreakJoints()
+                        
+                        -- Set custom physical properties so the player can push it away effortlessly
+                        part.CustomPhysicalProperties = PhysicalProperties.new(
+                            0.01, -- Extremely low density so it behaves like paper/light plastic
+                            0.3,  -- Friction
+                            0.5,  -- Elasticity
+                            1,    -- Friction weight
+                            1     -- Elasticity weight
+                        )
+                        
+                        -- Play destruction sound
+                        if not playedSound and math.random(1, 3) == 1 then
+                            local destSound = Instance.new("Sound", part)
+                            destSound.SoundId = destructionSounds[math.random(1, #destructionSounds)]
+                            destSound.Volume = 4
+                            destSound.PlaybackSpeed = math.random(80, 120) / 100
+                            destSound.MaxDistance = 150
+                            destSound:Play()
+                            game.Debris:AddItem(destSound, 5)
+                            playedSound = true
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    spawn(function()
+        while entityPart ~= nil and entity ~= nil do 
+            wait(0.5)
+            local v = game.Players.LocalPlayer
+            if v.Character ~= nil and v.Character:FindFirstChild("HumanoidRootPart") then
+                if canSeeTarget(v.Character, 50) and not v.Character:GetAttribute("Hiding") then
+                    moving:Stop()
+                    local ReboundJs = Instance.new("ScreenGui")
+                    local Static = Instance.new("ImageLabel")
+                    local ReboundImg = Instance.new("ImageLabel")
+                    local JSSIZE = Instance.new("ImageLabel")
+ 
+                    ReboundJs.Name = "ReboundJs"
+                    ReboundJs.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ 
+                    Static.Name = "Static"
+                    Static.Parent = ReboundJs
+                    Static.BackgroundTransparency = 1
+                    Static.Size = UDim2.new(11, 0, 111, 0)
+                    Static.Image = "rbxassetid://236543215"
+                    Static.ImageTransparency = 1
+ 
+                    ReboundImg.Name = "Rebound"
+                    ReboundImg.Parent = ReboundJs
+                    ReboundImg.BackgroundTransparency = 1
+                    ReboundImg.Position = UDim2.new(0.4866, 0, 0.4793, 0)
+                    ReboundImg.Size = UDim2.new(0.0267, 0, 0.0387, 0)
+                    ReboundImg.Image = "rbxassetid://0"
+ 
+                    JSSIZE.Name = "JSSIZE"
+                    JSSIZE.Parent = ReboundJs
+                    JSSIZE.BackgroundTransparency = 1
+                    JSSIZE.Position = UDim2.new(-0.586, 0, -1.251, 0)
+                    JSSIZE.Size = UDim2.new(2.128, 0, 3.081, 0)
+                    JSSIZE.Visible = false
+                    JSSIZE.Image = "rbxassetid://10914800940"
+ 
+                    coroutine.wrap(function()
+                        local script = Static
+                        while true do
+                            script.Image = "rbxassetid://236543215"
+                            task.wait(0.002)
+                            script.Rotation = 0
+                            task.wait(0.002)
+                            script.Rotation = 180
+                            task.wait(0.002)
+                            script.Image = "rbxassetid://236777652"
+                            task.wait(0.002)
+                            script.Rotation = 0
+                            task.wait(0.002)
+                            script.Rotation = 180
+                            task.wait(0.002)
+                        end
+                    end)()
+ 
+                    coroutine.wrap(function()
+                        local Plr = game.Players.LocalPlayer
+                        local gui = ReboundJs
+                        local static = gui.Static
+                        local jspos = gui.JSSIZE
+
+                        local rebjumpscare = G.LoadGithubAudio("https://raw.githubusercontent.com/Francisco1692qzd/RevivedOldHardcore/main/JumpscareReb.mp3")
+                        local jumpscare = Instance.new("Sound")
+                        jumpscare.SoundId = rebjumpscare
+                        jumpscare.Parent = workspace
+                        jumpscare.Volume = 5
+                        jumpscare:Play() 
+                        game.Debris:AddItem(jumpscare, 10)
+ 
+                        game.TweenService:Create(static, TweenInfo.new(0.5), {ImageTransparency = 0.8}):Play()
+                        game.TweenService:Create(gui.Rebound, TweenInfo.new(0.5), {Size = jspos.Size, Position = jspos.Position}):Play()
+                        
+                        task.spawn(function()
+                            wait(0.3)
+                            local hum = Plr.Character:FindFirstChildWhichIsA("Humanoid")
+                            if hum then hum:TakeDamage(100) end
+                            
+                            game.ReplicatedStorage.GameStats["Player_" .. Plr.Name].Total.DeathCause.Value = "Rebound"
+							local hints = {
+								"You died to the entity designated as Rebound...",
+								"He could trick you by coming through the next doors in the next few seconds!",
+								"Whenever this happens, do not go forward, stay on your desired hiding spot!"
+							}
+							if ReplicatedStorage:FindFirstChild("RemotesFolder") then
+								remotesFolder = ReplicatedStorage:FindFirstChild("RemotesFolder")
+			                    firesignal(remotesFolder.DeathHint.OnClientEvent, hints, "Blue")
+							elseif ReplicatedStorage:FindFirstChild("Bricks") then
+								remotesFolder = ReplicatedStorage:FindFirstChild("Bricks")
+			                    firesignal(remotesFolder.DeathHint.OnClientEvent, hints)
+							end
+                        end)
+                        wait(0.5)
+                        game.TweenService:Create(static, TweenInfo.new(1), {ImageTransparency = 1}):Play()
+                        game.TweenService:Create(gui.Rebound, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
+                        wait(1)
+                        gui:Destroy()
+                    end)()
+                end
+            end
+
+            if entityPart and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                if (entityPart.Position - v.Character.HumanoidRootPart.Position).Magnitude <= 60 then
+                    camShake:Start()
+                    camShake:ShakeOnce(17, 9, 0, 2,1,6)
+                end
+            end
+        end
+    end)
+
+    for i = latestRoom.Value, 1, -1 do
+        if currentRooms:FindFirstChild(i) then
+            local room = currentRooms[i]
+            if room and room:FindFirstChild("RoomEntrance") then
+                local abc = room:FindFirstChild("RoomEntrance")
+                local jerk = game.TweenService:Create(entityPart, TweenInfo.new(speed, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0,false,0), {CFrame = abc.CFrame + Vector3.new(0,0.6,0)})
+                jerk:Play()
+                jerk.Completed:Wait()
+            end
+        end
+    end
+
+    entityPart.Anchored = false
+    entityPart.CanCollide = false
+    game.Debris:AddItem(entity, 5)
+end
+
+local function SpawnReb()
+    -- CHANGED: Updated maxRebounds to dynamically choose 7 or 8 returns
+    local maxRebounds = math.random(7, 8)
+    local rebarrival = G.LoadGithubAudio("https://raw.githubusercontent.com/Francisco1692qzd/RevivedOldHardcore/main/Warning.mp3")
+    local arrival = Instance.new("Sound")
+    arrival.SoundId = rebarrival
+    arrival.Parent = workspace
+    arrival.Volume = 5
+    arrival:Play() 
+    game.Debris:AddItem(arrival, 10)
+    
+    local cameraShaker = require(game.ReplicatedStorage.CameraShaker)
+    local camera = workspace.CurrentCamera
+
+    local camShake = cameraShaker.new(Enum.RenderPriority.Camera.Value, function(cf)
+        camera.CFrame = camera.CFrame * cf
+    end)
+    
+    local Warn = Instance.new("ColorCorrectionEffect", game.Lighting)
+    Warn.TintColor = Color3.fromRGB(65, 138, 255)
+    Warn.Saturation = -0.7
+    Warn.Contrast = 0.2
+    game.TweenService:Create(Warn, TweenInfo.new(15), {
+        TintColor = Color3.fromRGB(255, 255, 255),
+        Saturation = 0,
+        Contrast = 0
+    }):Play()                                                  
+    
+    game.Debris:AddItem(Warn, 15)
+    camShake:Start()
+    camShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+    pcall(Rebound)
+    
+    while maxRebounds > 0 do
+        game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+        wait(2)
+        pcall(Rebound)
+        maxRebounds = maxRebounds - 1
+    end
+    
+	local AchievementModule = game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI")
+	if AchievementModule then
+	    AchievementModule = AchievementModule.Initiator.Main_Game.RemoteListener.Modules.AchievementUnlock
+	end
+	
+	if AchievementModule == nil then return end
+	if workspace:FindFirstChild("ReboundAchievement") then return end
+	if not game.ReplicatedStorage:FindFirstChild("ModulesShared") then return end
+	
+	local dataModule = require(game:GetService("ReplicatedStorage"):WaitForChild("ModulesShared"):WaitForChild("Achievements"))
+	local unlockFunc = require(AchievementModule)
+	
+	if not workspace:FindFirstChild("ReboundAchievement") then
+		unlockFunc(nil, "Rebound") 
+	end
+	
+	local ObtainedBadge = Instance.new("BoolValue")
+	ObtainedBadge.Name = "ReboundAchievement"
+	ObtainedBadge.Value = true
+	ObtainedBadge.Parent = workspace
+end
+
+pcall(SpawnReb)
